@@ -1,0 +1,545 @@
+{
+  "info": {
+    "_postman_id": "0a8e3f2c-1234-4f1d-9b1e-homestock0001",
+    "name": "HomeStock API",
+    "description": "Postman collection covering every HomeStock REST endpoint.\n\nFlow:\n1. Run **Health → Health check** to verify the backend is up.\n2. Run **Auth → Register** (or skip if the user already exists).\n3. Run **Auth → Login** — Symfony issues a `PHPSESSID` cookie that Postman keeps for the rest of the run.\n4. Use the rest of the requests in any order; the test scripts capture IDs into collection variables (`categoryId`, `storageLocationId`, `storeId`, `productId`).\n\nDefaults assume `make up` is running locally with the dev fixtures loaded (`make fixtures`):\n- `baseUrl`  = `http://localhost:8080`\n- `email`    = `demo@homestock.local`\n- `password` = `demopass123`\n\nAuthentication uses the Symfony session cookie. Make sure Postman's cookie jar is enabled (it is by default).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "email", "value": "demo@homestock.local", "type": "string" },
+    { "key": "password", "value": "demopass123", "type": "string" },
+    { "key": "name", "value": "Demo User", "type": "string" },
+    { "key": "categoryId", "value": "", "type": "string" },
+    { "key": "storageLocationId", "value": "", "type": "string" },
+    { "key": "storeId", "value": "", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Public liveness probe. Returns `{\"status\":\"ok\"}`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"{{name}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Creates a user. Returns 201 with `{id, email, name, roles}` or 409 if the email is already taken. Validation errors return 422 with a `fields` map."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created or 409 already exists', () => {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Symfony `json_login` firewall. On success returns the user payload and sets the `PHPSESSID` session cookie. Throttled to 5 attempts per minute per IP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns user', () => pm.expect(pm.response.json()).to.have.property('email'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns the currently logged-in user, or 401 if no session is present."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Invalidates the session. After this call subsequent authenticated requests return 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Lists all categories. Each item has `{id, name, slug, requiresExpiration}`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "if (Array.isArray(items) && items.length > 0) {",
+                  "  pm.collectionVariables.set('categoryId', items[0].id);",
+                  "  pm.test('captured first category id', () => pm.expect(items[0].id).to.be.a('number'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Snacks\",\n  \"requiresExpiration\": true\n}"
+            },
+            "description": "Creates a new category. Slug is derived from the name server-side."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('categoryId', body.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Storage Locations",
+      "item": [
+        {
+          "name": "List storage locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/storage-locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "storage-locations"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "if (Array.isArray(items) && items.length > 0) {",
+                  "  pm.collectionVariables.set('storageLocationId', items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create storage location",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/storage-locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "storage-locations"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cellar\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('storageLocationId', body.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stores",
+      "item": [
+        {
+          "name": "List stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stores",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stores"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "if (Array.isArray(items) && items.length > 0) {",
+                  "  pm.collectionVariables.set('storeId', items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create store",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stores",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stores"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local Market\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('storeId', body.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "description": "Returns the current user's products. Empty array if none."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List products (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?category={{categoryId}}&storage={{storageLocationId}}&expiring_within_days=7&below_min_stock=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "category", "value": "{{categoryId}}", "description": "Category id" },
+                { "key": "storage", "value": "{{storageLocationId}}", "description": "Storage location id" },
+                { "key": "expiring_within_days", "value": "7", "description": "Items expiring within N days" },
+                { "key": "below_min_stock", "value": "true", "description": "Only items at/under their min stock" }
+              ]
+            },
+            "description": "All filters are optional; combine them as needed."
+          }
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Milk\",\n  \"brand\": \"Acme\",\n  \"categoryId\": {{categoryId}},\n  \"storageLocationId\": {{storageLocationId}},\n  \"preferredStoreId\": null,\n  \"unitType\": \"l\",\n  \"quantity\": \"2\",\n  \"minStock\": \"1\",\n  \"expirationDate\": \"2026-12-31\",\n  \"notes\": \"Whole milk\"\n}"
+            },
+            "description": "Required: `name`, `categoryId`. Allowed `unitType`: `unit`, `g`, `kg`, `ml`, `l`. `quantity` and `minStock` are decimals sent as strings."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('productId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Milk (skim)\",\n  \"minStock\": \"2\",\n  \"notes\": \"Skim milk\"\n}"
+            },
+            "description": "Partial update — send only the fields you want to change. `quantity` is editable here, but for inventory changes prefer the movements endpoint."
+          }
+        },
+        {
+          "name": "Add stock movement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/movements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}", "movements"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": \"-1.5\",\n  \"reason\": \"consume\"\n}"
+            },
+            "description": "Adjusts `quantity` transactionally. `delta` is a non-zero decimal (positive or negative). `reason` ∈ `purchase`, `consume`, `discard`, `adjust`. Going below 0 is rejected."
+          }
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 no content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Expiring soon",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/expiring?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "expiring"],
+              "query": [
+                { "key": "days", "value": "7", "description": "1–365, default 7" }
+              ]
+            },
+            "description": "Returns the user's products whose `expirationDate` falls within the next `days` days."
+          }
+        },
+        {
+          "name": "Shopping list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/shopping-list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "shopping-list"]
+            },
+            "description": "Returns the user's products where `quantity <= minStock`."
+          }
+        }
+      ]
+    }
+  ]
+}
