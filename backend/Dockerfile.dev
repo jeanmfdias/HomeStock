@@ -1,0 +1,27 @@
+FROM php:8.5-fpm-alpine
+
+RUN apk add --no-cache \
+        bash \
+        git \
+        unzip \
+        icu-dev \
+        sqlite \
+        sqlite-dev \
+        oniguruma-dev \
+        autoconf \
+        g++ \
+        make \
+    && docker-php-ext-install -j$(nproc) \
+        intl \
+        pdo_sqlite \
+        opcache \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu \
+    && apk del autoconf g++ make
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+WORKDIR /app
+
+EXPOSE 9000
+CMD ["php-fpm", "-F"]
