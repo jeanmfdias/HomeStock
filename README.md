@@ -14,11 +14,11 @@ Current MVP version: **0.0.2** (see [`MVP.md`](./MVP.md) for the product spec an
 |-------------|-------------------------------------------------------------|
 | Backend     | PHP 8.5 + Symfony 8.0 (REST/JSON)                           |
 | Database    | SQLite (file inside a Docker named volume, WAL mode)        |
-| Frontend    | Vue 3 + TypeScript + Vite (planned, see PLAN.md Step 6)     |
+| Frontend    | Vue 3 + TypeScript + Vite + Pinia + Vue Router + vue-i18n + vite-plugin-pwa |
 | Auth        | Symfony `json_login` firewall, `argon2id`, session cookie   |
 | i18n        | `symfony/translation` + `vue-i18n` (`pt_BR` default, `en` fallback) |
 | Infra       | Docker Compose (dev + prod)                                 |
-| CI          | GitHub Actions (planned, see PLAN.md Step 7)                |
+| CI          | GitHub Actions (`.github/workflows/backend.yml`, `frontend.yml`) |
 | Quality     | PHPUnit, Vitest, php-cs-fixer, PHPStan, ESLint, Prettier    |
 
 ---
@@ -37,7 +37,7 @@ Current MVP version: **0.0.2** (see [`MVP.md`](./MVP.md) for the product spec an
 │   ├── config/, migrations/, tests/Functional/, public/
 │   ├── Dockerfile.dev / Dockerfile (3-stage prod)
 │   └── phpunit.dist.xml
-├── frontend/               Vue 3 SPA (skeleton — Step 6 of PLAN.md)
+├── frontend/               Vue 3 SPA (Pinia, Vue Router, vue-i18n, PWA, Vitest)
 ├── docker/                 nginx + supervisord configs
 ├── docker-compose.yml      Dev stack (php-fpm, nginx, node)
 ├── docker-compose.prod.yml Single-image prod + named volume + backups bind-mount
@@ -300,9 +300,6 @@ Behind a reverse proxy, configure `TRUSTED_PROXIES` so Symfony's IP-based login 
 
 Remaining MVP work (from `PLAN.md`):
 
-- Step 6 — Vue 3 frontend (Pinia, vue-router, vue-i18n, vite-plugin-pwa, Vitest)
-- Step 7 — GitHub Actions CI (backend + frontend workflows)
-- Step 8 — Production polish (`bin/console app:create-user`, opcache preload, backup verification)
-- Step 9 — End-to-end verification
-
-Symfony 8.0 is supported until July 2026; an 8.1 upgrade is scheduled after May 2026.
+- Verify `make prod-build` end-to-end on a clean host
+- Verify `make backup` round-trip on the production volume
+- Schedule an 8.1 upgrade after May 2026 (Symfony 8.0 EOL: July 2026)
