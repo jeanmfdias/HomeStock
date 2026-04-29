@@ -7,7 +7,7 @@ RUN apk add --no-cache \
         icu-dev \
         sqlite \
         sqlite-dev \
-    && docker-php-ext-install intl pdo_sqlite
+    && docker-php-ext-install bcmath intl pdo_sqlite
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 

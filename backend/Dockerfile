@@ -11,7 +11,7 @@ RUN npm run build
 FROM php:8.5-fpm-alpine AS backend-build
 RUN apk add --no-cache \
         git unzip icu-dev sqlite-dev \
-    && docker-php-ext-install intl pdo_sqlite
+    && docker-php-ext-install bcmath intl pdo_sqlite
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
@@ -27,7 +27,7 @@ RUN composer dump-autoload --classmap-authoritative --no-dev \
 FROM php:8.5-fpm-alpine
 RUN apk add --no-cache \
         nginx supervisor sqlite icu-libs \
-    && docker-php-ext-install intl pdo_sqlite
+    && docker-php-ext-install bcmath intl pdo_sqlite
 
 RUN { \
         echo "opcache.enable=1"; \
