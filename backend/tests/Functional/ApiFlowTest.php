@@ -105,7 +105,7 @@ class ApiFlowTest extends WebTestCase
             'delta' => '-10',
             'reason' => 'consume',
         ]);
-        self::assertResponseStatusCodeSame(500);
+        self::assertResponseStatusCodeSame(422);
     }
 
     public function testUnauthenticatedAccessIsRejected(): void

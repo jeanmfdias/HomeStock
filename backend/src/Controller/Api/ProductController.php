@@ -154,17 +154,21 @@ class ProductController
             return new JsonResponse(['error' => 'delta_must_be_nonzero'], 422);
         }
 
-        $this->em->wrapInTransaction(function () use ($product, $delta, $reason): void {
-            $newQuantity = bcadd($product->getQuantity(), $delta, 3);
-            if (bccomp($newQuantity, '0', 3) < 0) {
-                throw new \DomainException('quantity_cannot_go_negative');
-            }
-            $product->setQuantity($newQuantity);
-            $product->touch();
+        try {
+            $this->em->wrapInTransaction(function () use ($product, $delta, $reason): void {
+                $newQuantity = bcadd($product->getQuantity(), $delta, 3);
+                if (bccomp($newQuantity, '0', 3) < 0) {
+                    throw new \DomainException('quantity_cannot_go_negative');
+                }
+                $product->setQuantity($newQuantity);
+                $product->touch();
 
-            $movement = new StockMovement($product, $delta, $reason);
-            $this->em->persist($movement);
-        });
+                $movement = new StockMovement($product, $delta, $reason);
+                $this->em->persist($movement);
+            });
+        } catch (\DomainException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 422);
+        }
 
         return new JsonResponse($this->serialize($product));
     }

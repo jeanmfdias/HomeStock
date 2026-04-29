@@ -7,17 +7,7 @@ RUN apk add --no-cache \
         icu-dev \
         sqlite \
         sqlite-dev \
-        oniguruma-dev \
-        autoconf \
-        g++ \
-        make \
-    && docker-php-ext-install -j$(nproc) \
-        intl \
-        pdo_sqlite \
-        opcache \
-    && pecl install apcu \
-    && docker-php-ext-enable apcu \
-    && apk del autoconf g++ make
+    && docker-php-ext-install intl pdo_sqlite
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 

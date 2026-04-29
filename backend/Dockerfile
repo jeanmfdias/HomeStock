@@ -10,10 +10,8 @@ RUN npm run build
 
 FROM php:8.5-fpm-alpine AS backend-build
 RUN apk add --no-cache \
-        git unzip icu-dev sqlite-dev oniguruma-dev autoconf g++ make \
-    && docker-php-ext-install -j$(nproc) intl pdo_sqlite opcache \
-    && pecl install apcu \
-    && docker-php-ext-enable apcu
+        git unzip icu-dev sqlite-dev \
+    && docker-php-ext-install intl pdo_sqlite
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
@@ -28,11 +26,8 @@ RUN composer dump-autoload --classmap-authoritative --no-dev \
 
 FROM php:8.5-fpm-alpine
 RUN apk add --no-cache \
-        nginx supervisor sqlite icu-libs oniguruma \
-    && docker-php-ext-install -j$(nproc) intl pdo_sqlite opcache \
-    && pecl install apcu \
-    && docker-php-ext-enable apcu \
-    && rm -rf /tmp/pear
+        nginx supervisor sqlite icu-libs \
+    && docker-php-ext-install intl pdo_sqlite
 
 RUN { \
         echo "opcache.enable=1"; \
