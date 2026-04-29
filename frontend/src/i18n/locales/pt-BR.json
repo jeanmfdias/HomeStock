@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "HomeStock",
+    "tagline": "Estoque doméstico"
+  },
+  "nav": {
+    "products": "Produtos",
+    "shopping": "Compras",
+    "expiring": "Vencendo",
+    "settings": "Ajustes",
+    "profile": "Perfil",
+    "logout": "Sair"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Senha",
+    "name": "Nome",
+    "login": "Entrar",
+    "register": "Criar conta",
+    "haveAccount": "Já tenho conta",
+    "needAccount": "Criar uma conta"
+  },
+  "products": {
+    "title": "Produtos",
+    "new": "Novo produto",
+    "edit": "Editar produto",
+    "empty": "Nenhum produto cadastrado.",
+    "all": "Todos",
+    "belowMin": "Baixo estoque",
+    "expiring": "Vencendo em 7 dias",
+    "quantity": "Quantidade",
+    "minStock": "Mínimo",
+    "category": "Categoria",
+    "brand": "Marca",
+    "storage": "Local",
+    "store": "Loja",
+    "unit": "Unidade",
+    "expiration": "Validade",
+    "notes": "Notas",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "movement": "Movimento",
+    "delta": "Variação",
+    "reason": "Motivo",
+    "apply": "Aplicar",
+    "low": "Comprar",
+    "ok": "OK",
+    "expired": "Vencido",
+    "today": "Vence hoje",
+    "soon": "Vence em {days} dias",
+    "noDate": "Sem validade"
+  },
+  "reports": {
+    "shoppingTitle": "Lista de compras",
+    "expiringTitle": "Produtos vencendo",
+    "days": "Dias",
+    "emptyShopping": "Nada abaixo do estoque mínimo.",
+    "emptyExpiring": "Nada vencendo neste período."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "categories": "Categorias",
+    "locations": "Locais",
+    "stores": "Lojas",
+    "requiresExpiration": "Exige validade",
+    "add": "Adicionar",
+    "name": "Nome"
+  },
+  "profile": {
+    "title": "Perfil",
+    "changePassword": "Alterar senha",
+    "passwordUnavailable": "A API ainda não expõe alteração de senha."
+  },
+  "movement": {
+    "purchase": "Compra",
+    "consume": "Consumo",
+    "discard": "Descarte",
+    "adjust": "Ajuste"
+  },
+  "errors": {
+    "login": "Email ou senha inválidos.",
+    "register": "Não foi possível criar a conta.",
+    "session": "Não foi possível carregar a sessão.",
+    "generic": "Não foi possível concluir a ação."
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "app": {
+    "name": "HomeStock",
+    "tagline": "Household inventory"
+  },
+  "nav": {
+    "products": "Products",
+    "shopping": "Shopping",
+    "expiring": "Expiring",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "login": "Log in",
+    "register": "Create account",
+    "haveAccount": "I have an account",
+    "needAccount": "Create an account"
+  },
+  "products": {
+    "title": "Products",
+    "new": "New product",
+    "edit": "Edit product",
+    "empty": "No products yet.",
+    "all": "All",
+    "belowMin": "Low stock",
+    "expiring": "Expiring in 7 days",
+    "quantity": "Quantity",
+    "minStock": "Minimum",
+    "category": "Category",
+    "brand": "Brand",
+    "storage": "Location",
+    "store": "Store",
+    "unit": "Unit",
+    "expiration": "Expiration",
+    "notes": "Notes",
+    "save": "Save",
+    "delete": "Delete",
+    "movement": "Movement",
+    "delta": "Delta",
+    "reason": "Reason",
+    "apply": "Apply",
+    "low": "Buy",
+    "ok": "OK",
+    "expired": "Expired",
+    "today": "Expires today",
+    "soon": "Expires in {days} days",
+    "noDate": "No date"
+  },
+  "reports": {
+    "shoppingTitle": "Shopping list",
+    "expiringTitle": "Expiring products",
+    "days": "Days",
+    "emptyShopping": "Nothing is below minimum stock.",
+    "emptyExpiring": "Nothing expires in this period."
+  },
+  "settings": {
+    "title": "Settings",
+    "categories": "Categories",
+    "locations": "Locations",
+    "stores": "Stores",
+    "requiresExpiration": "Requires expiration",
+    "add": "Add",
+    "name": "Name"
+  },
+  "profile": {
+    "title": "Profile",
+    "changePassword": "Change password",
+    "passwordUnavailable": "The API does not expose password changes yet."
+  },
+  "movement": {
+    "purchase": "Purchase",
+    "consume": "Consume",
+    "discard": "Discard",
+    "adjust": "Adjust"
+  },
+  "errors": {
+    "login": "Invalid email or password.",
+    "register": "Could not create the account.",
+    "session": "Could not load the session.",
+    "generic": "Could not complete the action."
+  }
+}
