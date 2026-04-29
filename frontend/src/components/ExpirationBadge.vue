@@ -25,7 +25,10 @@ const state = computed(() => {
     return { label: t('products.today'), className: 'danger' }
   }
   if (diffDays <= 7) {
-    return { label: t('products.soon', { days: diffDays }), className: 'warning' }
+    return {
+      label: t('products.soon', diffDays, { named: { days: diffDays } }),
+      className: 'warning',
+    }
   }
 
   return { label: props.date, className: '' }

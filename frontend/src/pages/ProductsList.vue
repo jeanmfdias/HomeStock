@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
 import { api } from '@/api/client'
 import type { MovementReason, Product } from '@/api/types'
@@ -9,6 +10,7 @@ import ProductCard from '@/components/ProductCard.vue'
 type Filter = 'all' | 'belowMin' | 'expiring'
 
 const router = useRouter()
+const { t } = useI18n()
 const products = ref<Product[]>([])
 const activeFilter = ref<Filter>('all')
 const loading = ref(false)
@@ -45,8 +47,16 @@ async function addMovement(id: number, delta: string, reason: MovementReason) {
 }
 
 async function deleteProduct(id: number) {
-  await api.deleteProduct(id)
-  products.value = products.value.filter((product) => product.id !== id)
+  const product = products.value.find((p) => p.id === id)
+  if (!product) return
+  if (!globalThis.confirm(t('common.confirmDelete', { name: product.name }))) return
+
+  try {
+    await api.deleteProduct(id)
+    products.value = products.value.filter((p) => p.id !== id)
+  } catch {
+    error.value = 'errors.generic'
+  }
 }
 
 onMounted(load)
@@ -59,23 +69,27 @@ onMounted(load)
       <RouterLink class="primary-button" to="/products/new">{{ $t('products.new') }}</RouterLink>
     </header>
 
-    <div class="filters">
+    <fieldset class="filters">
+      <legend class="sr-only">{{ $t('products.title') }}</legend>
       <button
         v-for="filter in ['all', 'belowMin', 'expiring'] as const"
         :key="filter"
         class="chip"
         :class="{ active: activeFilter === filter }"
         type="button"
+        :aria-pressed="activeFilter === filter"
         @click="setFilter(filter)"
       >
         {{ $t(`products.${filter}`) }}
       </button>
+    </fieldset>
+
+    <p v-if="error" class="error" role="alert">{{ $t(error) }}</p>
+
+    <div v-if="loading" class="grid" aria-busy="true" :aria-label="$t('common.loading')">
+      <div v-for="n in 6" :key="n" class="card skeleton" aria-hidden="true"></div>
     </div>
-
-    <p v-if="error" class="error">{{ $t(error) }}</p>
-    <p v-if="loading" class="muted">...</p>
     <p v-else-if="products.length === 0" class="muted">{{ $t('products.empty') }}</p>
-
     <div v-else class="grid">
       <ProductCard
         v-for="product in products"

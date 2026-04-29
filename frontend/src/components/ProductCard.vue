@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useId } from 'vue'
+
 import type { MovementReason, Product } from '@/api/types'
 import ExpirationBadge from './ExpirationBadge.vue'
 
@@ -12,15 +14,19 @@ const emit = defineEmits<{
   movement: [id: number, delta: string, reason: MovementReason]
 }>()
 
+const deltaId = useId()
+const reasonId = useId()
+const hintId = useId()
+
 function submitMovement(event: Event, id: number) {
-  const data = new FormData(event.currentTarget as HTMLFormElement)
+  const form = event.currentTarget as HTMLFormElement
+  const data = new FormData(form)
   emit(
     'movement',
     id,
     String(data.get('delta') ?? ''),
     String(data.get('reason')) as MovementReason,
   )
-  const form = event.currentTarget as HTMLFormElement
   form.reset()
 }
 </script>
@@ -28,7 +34,7 @@ function submitMovement(event: Event, id: number) {
 <template>
   <article class="card product-card">
     <header class="product-card-header">
-      <div>
+      <div class="product-title">
         <h2>{{ product.name }}</h2>
         <p v-if="product.brand" class="muted">{{ product.brand }}</p>
       </div>
@@ -59,13 +65,29 @@ function submitMovement(event: Event, id: number) {
     <ExpirationBadge :date="product.expirationDate" />
 
     <form class="movement-form" @submit.prevent="submitMovement($event, product.id)">
-      <input name="delta" :aria-label="$t('products.delta')" placeholder="-1" required />
-      <select name="reason" :aria-label="$t('products.reason')">
-        <option value="purchase">{{ $t('movement.purchase') }}</option>
-        <option value="consume">{{ $t('movement.consume') }}</option>
-        <option value="discard">{{ $t('movement.discard') }}</option>
-        <option value="adjust">{{ $t('movement.adjust') }}</option>
-      </select>
+      <div class="movement-fields">
+        <div class="field">
+          <label :for="deltaId">{{ $t('products.delta') }}</label>
+          <input
+            :id="deltaId"
+            name="delta"
+            inputmode="decimal"
+            :placeholder="$t('products.deltaPlaceholder')"
+            :aria-describedby="hintId"
+            required
+          />
+        </div>
+        <div class="field">
+          <label :for="reasonId">{{ $t('products.reason') }}</label>
+          <select :id="reasonId" name="reason">
+            <option value="purchase">{{ $t('movement.purchase') }}</option>
+            <option value="consume">{{ $t('movement.consume') }}</option>
+            <option value="discard">{{ $t('movement.discard') }}</option>
+            <option value="adjust">{{ $t('movement.adjust') }}</option>
+          </select>
+        </div>
+      </div>
+      <p :id="hintId" class="field-hint">{{ $t('products.deltaHelp') }}</p>
       <button class="primary-button" type="submit">{{ $t('products.apply') }}</button>
     </form>
 
@@ -91,10 +113,19 @@ function submitMovement(event: Event, id: number) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-h2,
+.product-title {
+  min-width: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: var(--fs-h2);
+  overflow-wrap: anywhere;
+}
+
 p,
 dl {
   margin: 0;
@@ -103,31 +134,49 @@ dl {
 .product-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 dt {
-  color: #667068;
+  color: var(--c-text-muted);
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 dd {
   margin: 2px 0 0;
+  overflow-wrap: anywhere;
 }
 
 .movement-form {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto;
-  gap: 8px;
+  gap: var(--space-2);
+}
+
+.movement-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-2);
 }
 
 .movement-form input,
 .movement-form select {
   min-width: 0;
   min-height: 40px;
-  border: 1px solid #cfc6b8;
-  border-radius: 8px;
-  padding: 8px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  background: #fff;
+}
+
+.movement-form .field > label {
+  color: var(--c-text-subtle);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.card-actions .ghost-button,
+.card-actions .danger-button {
+  flex: 1;
 }
 </style>

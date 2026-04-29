@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, useId } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { api } from '@/api/client'
@@ -15,6 +15,10 @@ const categories = ref<Category[]>([])
 const locations = ref<ReferenceItem[]>([])
 const stores = ref<ReferenceItem[]>([])
 const error = ref<string | null>(null)
+const saving = ref(false)
+
+const quantityId = useId()
+const minStockId = useId()
 
 const form = ref<ProductPayload>({
   name: '',
@@ -66,6 +70,7 @@ async function load() {
 
 async function submit() {
   error.value = null
+  saving.value = true
   try {
     if (props.id) {
       await api.updateProduct(props.id, form.value)
@@ -75,7 +80,13 @@ async function submit() {
     await router.push('/products')
   } catch {
     error.value = 'errors.generic'
+  } finally {
+    saving.value = false
   }
+}
+
+function cancel() {
+  router.push('/products')
 }
 
 onMounted(load)
@@ -86,14 +97,21 @@ onMounted(load)
     <form class="form-panel" @submit.prevent="submit">
       <div class="page-header">
         <h1>{{ $t(id ? 'products.edit' : 'products.new') }}</h1>
-        <button class="primary-button" type="submit">{{ $t('products.save') }}</button>
+        <div class="form-actions">
+          <button class="ghost-button" type="button" @click="cancel">
+            {{ $t('common.cancel') }}
+          </button>
+          <button class="primary-button" type="submit" :disabled="saving">
+            {{ $t('products.save') }}
+          </button>
+        </div>
       </div>
 
       <p v-if="error" class="error">{{ $t(error) }}</p>
 
       <div class="form-grid">
         <label class="field">
-          <span>{{ $t('products.title') }}</span>
+          <span>{{ $t('products.name') }}</span>
           <input v-model="form.name" required />
         </label>
         <label class="field">
@@ -117,17 +135,17 @@ onMounted(load)
           </select>
         </label>
         <div class="field">
-          <span class="field-label">{{ $t('products.quantity') }}</span>
-          <QuantityStepper v-model="form.quantity" :step="1" />
+          <label :for="quantityId" class="field-label">{{ $t('products.quantity') }}</label>
+          <QuantityStepper v-model="form.quantity" :input-id="quantityId" :step="1" />
         </div>
         <div class="field">
-          <span class="field-label">{{ $t('products.minStock') }}</span>
-          <QuantityStepper v-model="form.minStock" :step="1" />
+          <label :for="minStockId" class="field-label">{{ $t('products.minStock') }}</label>
+          <QuantityStepper v-model="form.minStock" :input-id="minStockId" :step="1" />
         </div>
         <label class="field">
           <span>{{ $t('products.storage') }}</span>
           <select v-model.number="form.storageLocationId">
-            <option :value="null"></option>
+            <option :value="null">{{ $t('common.none') }}</option>
             <option v-for="location in locations" :key="location.id" :value="location.id">
               {{ location.name }}
             </option>
@@ -136,7 +154,7 @@ onMounted(load)
         <label class="field">
           <span>{{ $t('products.store') }}</span>
           <select v-model.number="form.preferredStoreId">
-            <option :value="null"></option>
+            <option :value="null">{{ $t('common.none') }}</option>
             <option v-for="store in stores" :key="store.id" :value="store.id">
               {{ store.name }}
             </option>

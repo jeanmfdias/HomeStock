@@ -3,6 +3,13 @@
     "name": "HomeStock",
     "tagline": "Estoque doméstico"
   },
+  "common": {
+    "none": "—",
+    "cancel": "Cancelar",
+    "language": "Idioma",
+    "loading": "Carregando…",
+    "confirmDelete": "Excluir \"{name}\"? Esta ação não pode ser desfeita."
+  },
   "nav": {
     "products": "Produtos",
     "shopping": "Compras",
@@ -22,6 +29,7 @@
   },
   "products": {
     "title": "Produtos",
+    "name": "Nome do produto",
     "new": "Novo produto",
     "edit": "Editar produto",
     "empty": "Nenhum produto cadastrado.",
@@ -40,15 +48,19 @@
     "save": "Salvar",
     "delete": "Excluir",
     "movement": "Movimento",
-    "delta": "Variação",
+    "delta": "Ajustar em",
+    "deltaHelp": "Use valor negativo para consumir",
+    "deltaPlaceholder": "±1",
     "reason": "Motivo",
     "apply": "Aplicar",
     "low": "Comprar",
     "ok": "OK",
     "expired": "Vencido",
     "today": "Vence hoje",
-    "soon": "Vence em {days} dias",
-    "noDate": "Sem validade"
+    "soon": "Vence em 1 dia | Vence em {days} dias",
+    "noDate": "Sem validade",
+    "decrease": "Diminuir",
+    "increase": "Aumentar"
   },
   "reports": {
     "shoppingTitle": "Lista de compras",
@@ -64,7 +76,8 @@
     "stores": "Lojas",
     "requiresExpiration": "Exige validade",
     "add": "Adicionar",
-    "name": "Nome"
+    "name": "Nome",
+    "empty": "Nada aqui ainda."
   },
   "profile": {
     "title": "Perfil",
@@ -81,6 +94,10 @@
     "login": "Email ou senha inválidos.",
     "register": "Não foi possível criar a conta.",
     "session": "Não foi possível carregar a sessão.",
+    "network": "Erro de rede. Verifique sua conexão e tente novamente.",
+    "validation": "Revise os campos destacados.",
+    "notFound": "O item não foi encontrado.",
+    "server": "O servidor está indisponível. Tente novamente em instantes.",
     "generic": "Não foi possível concluir a ação."
   }
 }

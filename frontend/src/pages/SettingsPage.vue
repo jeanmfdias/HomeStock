@@ -59,7 +59,10 @@ onMounted(load)
           <span>{{ $t('settings.requiresExpiration') }}</span>
         </label>
         <button class="primary-button" type="submit">{{ $t('settings.add') }}</button>
-        <p class="muted">{{ categories.map((item) => item.name).join(', ') }}</p>
+        <ul v-if="categories.length" class="simple-list">
+          <li v-for="item in categories" :key="item.id">{{ item.name }}</li>
+        </ul>
+        <p v-else class="muted simple-list--empty">{{ $t('settings.empty') }}</p>
       </form>
 
       <form class="card" @submit.prevent="addLocation">
@@ -69,7 +72,10 @@ onMounted(load)
           <input v-model="locationName" required />
         </label>
         <button class="primary-button" type="submit">{{ $t('settings.add') }}</button>
-        <p class="muted">{{ locations.map((item) => item.name).join(', ') }}</p>
+        <ul v-if="locations.length" class="simple-list">
+          <li v-for="item in locations" :key="item.id">{{ item.name }}</li>
+        </ul>
+        <p v-else class="muted simple-list--empty">{{ $t('settings.empty') }}</p>
       </form>
 
       <form class="card" @submit.prevent="addStore">
@@ -79,8 +85,23 @@ onMounted(load)
           <input v-model="storeName" required />
         </label>
         <button class="primary-button" type="submit">{{ $t('settings.add') }}</button>
-        <p class="muted">{{ stores.map((item) => item.name).join(', ') }}</p>
+        <ul v-if="stores.length" class="simple-list">
+          <li v-for="item in stores" :key="item.id">{{ item.name }}</li>
+        </ul>
+        <p v-else class="muted simple-list--empty">{{ $t('settings.empty') }}</p>
       </form>
     </div>
   </section>
 </template>
+
+<style scoped>
+.card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: var(--fs-h2);
+}
+</style>

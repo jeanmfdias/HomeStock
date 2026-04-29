@@ -3,6 +3,13 @@
     "name": "HomeStock",
     "tagline": "Household inventory"
   },
+  "common": {
+    "none": "—",
+    "cancel": "Cancel",
+    "language": "Language",
+    "loading": "Loading…",
+    "confirmDelete": "Delete \"{name}\"? This cannot be undone."
+  },
   "nav": {
     "products": "Products",
     "shopping": "Shopping",
@@ -22,6 +29,7 @@
   },
   "products": {
     "title": "Products",
+    "name": "Product name",
     "new": "New product",
     "edit": "Edit product",
     "empty": "No products yet.",
@@ -40,15 +48,19 @@
     "save": "Save",
     "delete": "Delete",
     "movement": "Movement",
-    "delta": "Delta",
+    "delta": "Adjust by",
+    "deltaHelp": "Use a negative value to consume",
+    "deltaPlaceholder": "±1",
     "reason": "Reason",
     "apply": "Apply",
     "low": "Buy",
     "ok": "OK",
     "expired": "Expired",
     "today": "Expires today",
-    "soon": "Expires in {days} days",
-    "noDate": "No date"
+    "soon": "Expires in 1 day | Expires in {days} days",
+    "noDate": "No date",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "reports": {
     "shoppingTitle": "Shopping list",
@@ -64,7 +76,8 @@
     "stores": "Stores",
     "requiresExpiration": "Requires expiration",
     "add": "Add",
-    "name": "Name"
+    "name": "Name",
+    "empty": "Nothing here yet."
   },
   "profile": {
     "title": "Profile",
@@ -81,6 +94,10 @@
     "login": "Invalid email or password.",
     "register": "Could not create the account.",
     "session": "Could not load the session.",
+    "network": "Network error. Check your connection and try again.",
+    "validation": "Please review the highlighted fields.",
+    "notFound": "The item could not be found.",
+    "server": "The server is unavailable. Try again in a moment.",
     "generic": "Could not complete the action."
   }
 }
