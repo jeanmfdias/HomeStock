@@ -13,5 +13,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /app
 
+COPY docker-entrypoint.sh /usr/local/bin/homestock-entrypoint
+RUN chmod +x /usr/local/bin/homestock-entrypoint
+
 EXPOSE 9000
+ENTRYPOINT ["homestock-entrypoint"]
 CMD ["php-fpm", "-F"]

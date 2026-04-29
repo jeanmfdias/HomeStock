@@ -42,9 +42,12 @@ COPY --from=backend-build /app /app
 COPY --from=frontend-build /frontend/dist /app/public/app
 COPY docker/nginx/prod.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
+COPY backend/docker-entrypoint.sh /usr/local/bin/homestock-entrypoint
 
 RUN mkdir -p /app/var/data /app/var/cache /app/var/log /run/nginx \
-    && chown -R www-data:www-data /app/var
+    && chown -R www-data:www-data /app/var \
+    && chmod +x /usr/local/bin/homestock-entrypoint
 
 EXPOSE 80
+ENTRYPOINT ["homestock-entrypoint"]
 CMD ["supervisord", "-c", "/etc/supervisord.conf", "-n"]
