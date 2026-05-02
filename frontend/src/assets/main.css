@@ -141,10 +141,16 @@ a {
 .danger-button,
 .chip,
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
   border: 0;
   border-radius: var(--radius);
   padding: 0 14px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
   transition:
     background-color 120ms ease,
     color 120ms ease,
@@ -154,7 +160,7 @@ a {
 
 .nav-links a {
   display: flex;
-  align-items: center;
+  justify-content: flex-start;
   color: var(--c-on-primary-soft);
 }
 

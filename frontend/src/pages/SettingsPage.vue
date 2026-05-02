@@ -96,12 +96,21 @@ onMounted(load)
 
 <style scoped>
 .card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
 .card h2 {
   margin: 0;
   font-size: var(--fs-h2);
+}
+
+.card .field input {
+  height: 42px;
+}
+
+.card .primary-button {
+  width: 100%;
 }
 </style>
