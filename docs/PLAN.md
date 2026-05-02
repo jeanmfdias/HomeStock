@@ -1,6 +1,6 @@
 # HomeStock — Implementation Plan
 
-This is the running execution plan for building HomeStock from MVP.md. It mirrors `~/.claude/plans/read-the-mvp-md-understand-eager-puzzle.md` (the approved planning doc).
+This is the running execution plan for building HomeStock from [MVP.md](./MVP.md). It mirrors `~/.claude/plans/read-the-mvp-md-understand-eager-puzzle.md` (the approved planning doc).
 
 ## Decisions (resolved with the user)
 1. **Tech versions:** PHP 8.5 (8.5.5) + Symfony 8.0 (8.0.x). Plan upgrade to Symfony 8.1 when it ships in May 2026 (8.0 EOL: July 2026).
@@ -12,7 +12,7 @@ This is the running execution plan for building HomeStock from MVP.md. It mirror
 
 ## Completed steps
 
-### ✅ Step 0 — Update MVP.md (v0.0.2)
+### ✅ Step 0 — Update [MVP.md](./MVP.md) (v0.0.2)
 Bumped version, removed contradictory auth wording, expanded product fields (unit type, storage location, min stock, stock movements, seed categories), pinned PHP/Symfony versions, added i18n + PWA + tests + CI sections, added Changelog block.
 
 ### ✅ Step 1 — Repository skeleton & Docker
@@ -76,7 +76,7 @@ Walked the golden path live against `php -S` against the dev SQLite database:
 10. ✅ Consume `-99` of Milk → 422 `quantity_cannot_go_negative` (transaction aborts, quantity unchanged)
 11. ✅ Logout → session invalidated; subsequent `/api/auth/me` → 401
 
-All four PLAN.md verification items (1–4) pass. Tests (`make test`): backend **3 tests / 23 assertions**, frontend **3 files / 6 tests**, total green.
+All four verification items in this plan (1–4) pass. Tests (`make test`): backend **3 tests / 23 assertions**, frontend **3 files / 6 tests**, total green.
 
 ---
 

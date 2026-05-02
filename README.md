@@ -1,170 +1,233 @@
 # HomeStock
 
-A self-hosted household stock manager. Tracks pantry, fridge, freezer, medicine, cleaning and other home supplies; records purchases and consumption as explicit stock movements; and produces a shopping list when items run low or are about to expire.
+Technical README for the HomeStock project.
 
-> **LAN-only.** Designed to run on a home server inside a trusted network. Do not expose it to the public internet without TLS and strong passwords.
+Business scope, product behavior, inventory rules, category rules, shopping-list rules, and MVP limitations are documented in [`PRODUCT_DESCRIPTION.md`](./docs/PRODUCT_DESCRIPTION.md).
 
-Current MVP version: **0.0.2** (see [`MVP.md`](./MVP.md) for the product spec and [`PLAN.md`](./PLAN.md) for the running implementation plan).
-
----
+The implementation plan and current project status are documented in [`PLAN.md`](./docs/PLAN.md). The original MVP notes are in [`MVP.md`](./docs/MVP.md).
 
 ## Stack
 
-| Layer       | Choice                                                      |
-|-------------|-------------------------------------------------------------|
-| Backend     | PHP 8.5 + Symfony 8.0 (REST/JSON)                           |
-| Database    | SQLite (file inside a Docker named volume, WAL mode)        |
-| Frontend    | Vue 3 + TypeScript + Vite + Pinia + Vue Router + vue-i18n + vite-plugin-pwa |
-| Auth        | Symfony `json_login` firewall, `argon2id`, session cookie   |
-| i18n        | `symfony/translation` + `vue-i18n` (`pt_BR` default, `en` fallback) |
-| Infra       | Docker Compose (dev + prod)                                 |
-| CI          | GitHub Actions (`.github/workflows/backend.yml`, `frontend.yml`) |
-| Quality     | PHPUnit, Vitest, php-cs-fixer, PHPStan, ESLint, Prettier    |
+| Layer | Choice |
+|---|---|
+| Backend | PHP 8.5 + Symfony 8.0 REST/JSON API |
+| Database | SQLite file stored in a Docker named volume |
+| Frontend | Vue 3 + TypeScript + Vite |
+| Frontend state/router | Pinia + Vue Router |
+| i18n | `symfony/translation` + `vue-i18n`; default `pt_BR`, fallback `en` |
+| PWA | `vite-plugin-pwa` + Workbox runtime cache |
+| Auth | Symfony Security `json_login`, `argon2id`, stateful session cookie |
+| Infra | Docker Compose for dev and production |
+| Web server | Nginx |
+| Process supervisor | Supervisord in the production image |
+| Backend tests | PHPUnit + Symfony functional tests |
+| Frontend tests | Vitest + Vue Test Utils + MSW |
+| Quality tools | PHP CS Fixer, PHPStan, ESLint, Prettier |
+| CI | GitHub Actions backend and frontend workflows |
 
----
+## Repository Layout
 
-## Repository layout
-
-```
+```text
 .
-├── backend/                Symfony 8 application
+├── backend/                  Symfony 8 application
 │   ├── src/
-│   │   ├── Controller/Api/   AuthController, ProductController, ReferenceController, ReportController, HealthController
-│   │   ├── Entity/           User, Category, Product, StockMovement, StorageLocation, Store, UnitType, MovementReason
+│   │   ├── Controller/Api/   API controllers
+│   │   ├── Entity/           Doctrine entities and enums
 │   │   ├── Repository/       Doctrine repositories
-│   │   ├── Security/         JSON success/failure handlers
-│   │   └── DataFixtures/     Seed categories, locations, demo user
-│   ├── config/, migrations/, tests/Functional/, public/
-│   ├── Dockerfile.dev / Dockerfile (3-stage prod)
+│   │   ├── Security/         JSON auth handlers
+│   │   └── DataFixtures/     Seed data
+│   ├── config/               Symfony configuration
+│   ├── migrations/           Doctrine migrations
+│   ├── public/               Symfony front controller
+│   ├── tests/Functional/     Symfony functional tests
+│   ├── Dockerfile.dev        Development PHP image
+│   ├── Dockerfile            Production multi-stage image
 │   └── phpunit.dist.xml
-├── frontend/               Vue 3 SPA (Pinia, Vue Router, vue-i18n, PWA, Vitest)
-├── docker/                 nginx + supervisord configs
-├── docker-compose.yml      Dev stack (php-fpm, nginx, node)
-├── docker-compose.prod.yml Single-image prod + named volume + backups bind-mount
-├── Makefile                Convenience targets (up/down/migrate/fixtures/test/backup/...)
-├── postman_test.json       Postman collection covering every endpoint
-├── MVP.md                  Product specification
-└── PLAN.md                 Implementation plan & status
+├── frontend/                 Vue 3 SPA
+│   ├── src/api/              API client and types
+│   ├── src/components/       Shared Vue components
+│   ├── src/i18n/             Frontend translations
+│   ├── src/pages/            Route pages
+│   ├── src/router/           Vue Router configuration
+│   ├── src/stores/           Pinia stores
+│   └── src/test/             Frontend test setup
+├── docker/                   Nginx and supervisord configs
+├── docs/
+│   ├── PRODUCT_DESCRIPTION.md  Product and business rules
+│   ├── MVP.md                  MVP source notes
+│   └── PLAN.md                 Implementation plan and status
+├── docker-compose.yml        Development stack
+├── docker-compose.prod.yml   Production stack
+├── Makefile                  Project commands
+└── postman_test.json         Postman collection
 ```
 
----
+## Development
 
-## Quickstart (development)
+Prerequisites:
 
-Prerequisites: Docker 24+ and `make`.
+- Docker 24+
+- `make`
+
+Start the development stack:
 
 ```bash
-# 1. Build images and start the dev stack
 make build
 make up
-
-# 2. Install backend deps and run migrations
 make install
 make migrate
-
-# 3. Load seed data (11 categories, 5 storage locations, demo user)
 make fixtures
+```
 
-# 4. Smoke test
+Smoke test:
+
+```bash
 curl -s http://localhost:8080/api/health
-# => {"status":"ok"}
 ```
 
-Services exposed in dev:
+Expected response:
 
-| URL                      | Service                         |
-|--------------------------|---------------------------------|
-| http://localhost:8080    | Backend (Symfony via nginx)     |
-| http://localhost:5173    | Frontend (Vite dev server)      |
-
-### Demo credentials (after `make fixtures`)
-
+```json
+{ "status": "ok" }
 ```
-email:    demo@homestock.local
+
+Development services:
+
+| URL | Service |
+|---|---|
+| `http://localhost:8080` | Symfony API through Nginx |
+| `http://localhost:5173` | Vite dev server |
+
+Demo credentials after `make fixtures`:
+
+```text
+email: demo@homestock.local
 password: demopass123
 ```
 
-### Common Make targets
+## Make Targets
 
-| Target              | Description                                       |
-|---------------------|---------------------------------------------------|
-| `make up`           | Start dev stack (php, nginx, node)                |
-| `make down`         | Stop dev stack                                    |
-| `make restart`      | `down` + `up`                                     |
-| `make logs`         | Tail container logs                               |
-| `make sh`           | Open a shell inside the PHP container             |
-| `make install`      | `composer install` + `npm install`                |
-| `make migrate`      | Run Doctrine migrations                           |
-| `make fixtures`     | Load seed data                                    |
-| `make test`         | Run PHPUnit + Vitest                              |
-| `make test-backend` | PHPUnit only                                      |
-| `make test-frontend`| Vitest only                                       |
-| `make lint`         | php-cs-fixer (dry run) + ESLint                   |
-| `make stan`         | PHPStan analyse                                   |
-| `make backup`       | Snapshot the SQLite DB into `./backups/`          |
-| `make prod-build`   | Build the production image                        |
-| `make prod-up`      | Start the production stack                        |
-| `make prod-down`    | Stop the production stack                         |
+| Target | Description |
+|---|---|
+| `make build` | Build development images |
+| `make up` | Start development containers |
+| `make down` | Stop development containers |
+| `make restart` | Restart development containers |
+| `make logs` | Tail container logs |
+| `make sh` | Open a shell inside the PHP container |
+| `make install` | Install backend and frontend dependencies |
+| `make migrate` | Run Doctrine migrations |
+| `make fixtures` | Load seed data |
+| `make test` | Run backend and frontend tests |
+| `make test-backend` | Run PHPUnit |
+| `make test-frontend` | Run Vitest |
+| `make lint` | Run PHP CS Fixer dry run and ESLint |
+| `make stan` | Run PHPStan |
+| `make backup` | Snapshot the SQLite database into `./backups/` |
+| `make prod-build` | Build the production image |
+| `make prod-up` | Start the production stack |
+| `make prod-down` | Stop the production stack |
 
----
+## Testing
 
-## Running tests
-
-### Backend (PHPUnit functional + unit)
+Backend:
 
 ```bash
 make test-backend
-# or, inside the php container:
-make sh
-vendor/bin/phpunit
 ```
 
-The functional suite (`tests/Functional/`) boots a Symfony `WebTestCase`, recreates the schema in the dedicated test SQLite DB, and walks the full register → login → product CRUD → stock movement → reports flow.
-
-### Frontend (Vitest)
+Frontend:
 
 ```bash
 make test-frontend
 ```
 
-### All tests
+All tests:
 
 ```bash
 make test
 ```
 
-### Static analysis & formatting
+Static analysis and linting:
 
 ```bash
-make lint   # php-cs-fixer --dry-run + eslint
-make stan   # phpstan analyse
+make lint
+make stan
 ```
 
----
+## API
 
-## Manual API testing with Postman
+Base URL in development:
 
-A ready-to-import collection is provided as [`postman_test.json`](./postman_test.json).
+```text
+http://localhost:8080
+```
 
-1. Postman → **File → Import** → select `postman_test.json`.
-2. Open the collection's **Variables** tab. Defaults match the dev fixtures:
-   - `baseUrl` = `http://localhost:8080`
-   - `email` = `demo@homestock.local`
-   - `password` = `demopass123`
-3. Run requests in order:
-   1. **Health → Health check**
-   2. **Auth → Register** (skip if you already created the user; 409 means the email is taken — which is fine)
-   3. **Auth → Login** — Symfony returns a `PHPSESSID` cookie that Postman keeps for the rest of the session
-   4. **Categories → List categories** — populates `categoryId`
-   5. **Storage Locations → List storage locations** — populates `storageLocationId`
-   6. **Products → Create product** — populates `productId`
-   7. Any other request
+All API endpoints accept and return JSON. Authenticated endpoints require the Symfony session cookie created by `POST /api/auth/login`.
 
-Test scripts inside the collection capture IDs into collection variables, so subsequent requests just work.
+Public endpoints:
 
-> Auth is session-cookie based. Postman's cookie jar is enabled by default; if you disabled it, requests after login will return 401.
+| Method | Path |
+|---|---|
+| `GET` | `/api/health` |
+| `POST` | `/api/auth/register` |
+| `POST` | `/api/auth/login` |
 
-You can also drive the same collection from the CLI with [Newman](https://github.com/postmanlabs/newman):
+Authenticated endpoints:
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/auth/me` |
+| `POST` | `/api/auth/logout` |
+| `GET` | `/api/products` |
+| `POST` | `/api/products` |
+| `GET` | `/api/products/{id}` |
+| `PATCH` | `/api/products/{id}` |
+| `DELETE` | `/api/products/{id}` |
+| `POST` | `/api/products/{id}/movements` |
+| `GET` | `/api/categories` |
+| `POST` | `/api/categories` |
+| `GET` | `/api/storage-locations` |
+| `POST` | `/api/storage-locations` |
+| `GET` | `/api/stores` |
+| `POST` | `/api/stores` |
+| `GET` | `/api/reports/expiring?days=N` |
+| `GET` | `/api/reports/shopping-list` |
+
+Validation errors return HTTP 422:
+
+```json
+{
+  "error": "validation_failed",
+  "fields": {
+    "field": "message"
+  }
+}
+```
+
+Other errors use a single `error` key, for example:
+
+```json
+{ "error": "unauthenticated" }
+```
+
+Business behavior for these endpoints is documented in [`PRODUCT_DESCRIPTION.md`](./docs/PRODUCT_DESCRIPTION.md).
+
+## Postman
+
+Import [`postman_test.json`](./postman_test.json) into Postman.
+
+Default collection variables:
+
+| Variable | Value |
+|---|---|
+| `baseUrl` | `http://localhost:8080` |
+| `email` | `demo@homestock.local` |
+| `password` | `demopass123` |
+
+Postman keeps the Symfony session cookie after login. If the cookie jar is disabled, authenticated requests return 401.
+
+CLI run with Newman:
 
 ```bash
 npx newman run postman_test.json \
@@ -173,133 +236,53 @@ npx newman run postman_test.json \
   --env-var password=demopass123
 ```
 
----
-
-## API specification
-
-Base URL (dev): `http://localhost:8080`. All endpoints accept and return JSON. Authenticated routes require a valid Symfony session cookie obtained from `POST /api/auth/login`.
-
-### Public endpoints
-
-| Method | Path                  | Purpose                                  |
-|--------|-----------------------|------------------------------------------|
-| GET    | `/api/health`         | Liveness probe → `{"status":"ok"}`       |
-| POST   | `/api/auth/register`  | Create a user                            |
-| POST   | `/api/auth/login`     | Log in, set session cookie               |
-
-### Authenticated endpoints (`ROLE_USER`)
-
-| Method | Path                                  | Purpose                                                   |
-|--------|---------------------------------------|-----------------------------------------------------------|
-| GET    | `/api/auth/me`                        | Current user                                              |
-| POST   | `/api/auth/logout`                    | Invalidate session                                        |
-| GET    | `/api/products`                       | List products (filters: `category`, `storage`, `expiring_within_days`, `below_min_stock`) |
-| POST   | `/api/products`                       | Create product                                            |
-| GET    | `/api/products/{id}`                  | Get product                                               |
-| PATCH  | `/api/products/{id}`                  | Partial update                                            |
-| DELETE | `/api/products/{id}`                  | Delete product                                            |
-| POST   | `/api/products/{id}/movements`        | Add stock movement (`delta` ≠ 0, `reason` ∈ enum)         |
-| GET    | `/api/categories`                     | List categories                                           |
-| POST   | `/api/categories`                     | Create category                                           |
-| GET    | `/api/storage-locations`              | List storage locations                                    |
-| POST   | `/api/storage-locations`              | Create storage location                                   |
-| GET    | `/api/stores`                         | List stores                                               |
-| POST   | `/api/stores`                         | Create store                                              |
-| GET    | `/api/reports/expiring?days=N`        | Products expiring within `N` days (1–365, default 7)      |
-| GET    | `/api/reports/shopping-list`          | Products where `quantity <= minStock`                     |
-
-### Domain rules
-
-- **Products are user-scoped.** Cross-user reads/writes return 404.
-- **Quantity is never edited directly through normal flows** — adjust via `POST /api/products/{id}/movements`. Allowed reasons: `purchase`, `consume`, `discard`, `adjust`. Going negative is rejected.
-- **Decimals as strings.** `quantity` and `minStock` round-trip as strings (Doctrine `decimal`). Compare with `bccomp`, never `===`.
-- **Unit types:** `unit`, `g`, `kg`, `ml`, `l`.
-- **Expiration:** optional, but required for categories whose `requiresExpiration = true` (Market, Vegetables & Fruits, Meat, Beverages, Bakery, Frozen, Medicine).
-- **Shopping list rule:** a product appears when `quantity <= minStock`.
-- **Auth throttle:** `/api/auth/login` is limited to 5 attempts per minute per IP.
-
-### Error shape
-
-Validation failures return 422 with:
-
-```json
-{ "error": "validation_failed", "fields": { "<field>": "<message>" } }
-```
-
-Other domain errors return a single-key object, e.g. `{"error": "email_taken"}` (409), `{"error": "not_found"}` (404), `{"error": "unauthenticated"}` (401).
-
-### Sample payloads
-
-**Register**
-
-```json
-POST /api/auth/register
-{ "email": "you@example.com", "name": "You", "password": "supersecret" }
-```
-
-**Login**
-
-```json
-POST /api/auth/login
-{ "email": "you@example.com", "password": "supersecret" }
-```
-
-**Create product**
-
-```json
-POST /api/products
-{
-  "name": "Milk",
-  "brand": "Acme",
-  "categoryId": 1,
-  "storageLocationId": 2,
-  "preferredStoreId": null,
-  "unitType": "l",
-  "quantity": "2",
-  "minStock": "1",
-  "expirationDate": "2026-12-31",
-  "notes": "Whole milk"
-}
-```
-
-**Stock movement (consume 1.5 L)**
-
-```json
-POST /api/products/42/movements
-{ "delta": "-1.5", "reason": "consume" }
-```
-
----
-
 ## Production
 
-The production stack lives in `docker-compose.prod.yml` and uses the multi-stage `backend/Dockerfile` (frontend build → composer install → runtime with nginx + supervisord). SQLite data is persisted in a named volume; backups land in a bind-mounted `./backups/` directory.
+Production uses `docker-compose.prod.yml` and the multi-stage `backend/Dockerfile`.
+
+The production image includes:
+
+- Frontend build.
+- Composer production install.
+- PHP runtime.
+- Nginx.
+- Supervisord.
+
+Start production:
 
 ```bash
 make prod-build
 make prod-up
-# ...
+```
+
+Stop production:
+
+```bash
 make prod-down
 ```
 
-Backups (any time the dev or prod stack is up):
+SQLite data is persisted in a Docker named volume. Backups are written to `./backups/`:
 
 ```bash
 make backup
-# => backups/backup-YYYYMMDD-HHMMSS.db
 ```
 
-Behind a reverse proxy, configure `TRUSTED_PROXIES` so Symfony's IP-based login throttling sees the real client IP.
+Behind a reverse proxy, configure `TRUSTED_PROXIES` so Symfony receives the real client IP.
 
----
+## CI
 
-## Versioning & roadmap
+Backend workflow:
 
-- **0.0.2** — Auth clarified (email + password), product fields expanded (unit type, storage location, min stock, stock movements), PHP/Symfony versions pinned, i18n + PWA + tests + CI sections added.
-- **0.0.1** — Initial idea.
+```text
+.github/workflows/backend.yml
+```
 
-Remaining MVP work (from `PLAN.md`):
+Frontend workflow:
 
-- Verify `make prod-build` end-to-end on a clean host
-- Verify `make backup` round-trip on the production volume
-- Schedule an 8.1 upgrade after May 2026 (Symfony 8.0 EOL: July 2026)
+```text
+.github/workflows/frontend.yml
+```
+
+The backend workflow runs Composer install, schema validation, PHP CS Fixer dry run, PHPStan, and PHPUnit.
+
+The frontend workflow runs npm install, linting, Vitest, and Vite production build.
