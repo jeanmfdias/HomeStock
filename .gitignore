@@ -37,3 +37,6 @@ backups/
 
 # Misc
 *.log
+
+.claude/
+.codex/
