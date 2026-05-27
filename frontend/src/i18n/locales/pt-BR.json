@@ -60,7 +60,19 @@
     "soon": "Vence em 1 dia | Vence em {days} dias",
     "noDate": "Sem validade",
     "decrease": "Diminuir",
-    "increase": "Aumentar"
+    "increase": "Aumentar",
+    "addStock": "Adicionar estoque",
+    "removeStock": "Retirar estoque",
+    "pickBatch": "Escolha um lote",
+    "newBatch": "Novo lote",
+    "batchOptional": "opcional",
+    "batches": "Lotes",
+    "batchEmpty": "Nenhum lote ainda.",
+    "nextExpiration": "Próxima validade",
+    "addBatchSuccess": "Lote adicionado.",
+    "cannotDeleteBatchWithHistory": "Não é possível excluir um lote com movimentações.",
+    "expirationRequired": "Esta categoria exige data de validade.",
+    "maxAvailable": "máx: {qty} {unit}"
   },
   "reports": {
     "shoppingTitle": "Lista de compras",

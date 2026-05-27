@@ -2,11 +2,11 @@
 import { onMounted, ref, watch } from 'vue'
 
 import { api } from '@/api/client'
-import type { ReportRow } from '@/api/types'
+import type { ExpiringRow } from '@/api/types'
 import ExpirationBadge from '@/components/ExpirationBadge.vue'
 
 const days = ref(7)
-const items = ref<ReportRow[]>([])
+const items = ref<ExpiringRow[]>([])
 
 async function load() {
   items.value = (await api.expiring(days.value)).items
@@ -37,7 +37,7 @@ watch(days, load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id">
+          <tr v-for="item in items" :key="item.batchId">
             <td>{{ item.name }}</td>
             <td>{{ item.category }}</td>
             <td>{{ item.quantity }} {{ item.unitType }}</td>

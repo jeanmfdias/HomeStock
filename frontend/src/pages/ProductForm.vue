@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useId } from 'vue'
+import { onMounted, ref, useId } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { api } from '@/api/client'
@@ -17,7 +17,6 @@ const stores = ref<ReferenceItem[]>([])
 const error = ref<string | null>(null)
 const saving = ref(false)
 
-const quantityId = useId()
 const minStockId = useId()
 
 const form = ref<ProductPayload>({
@@ -27,15 +26,9 @@ const form = ref<ProductPayload>({
   storageLocationId: null,
   preferredStoreId: null,
   unitType: 'unit',
-  quantity: '0',
   minStock: '1',
-  expirationDate: null,
   notes: '',
 })
-
-const selectedCategory = computed(() =>
-  categories.value.find((category) => category.id === Number(form.value.categoryId)),
-)
 
 async function load() {
   const [categoryRows, locationRows, storeRows] = await Promise.all([
@@ -60,9 +53,7 @@ async function load() {
       storageLocationId: product.storageLocation?.id ?? null,
       preferredStoreId: product.preferredStore?.id ?? null,
       unitType: product.unitType,
-      quantity: product.quantity,
       minStock: product.minStock,
-      expirationDate: product.expirationDate,
       notes: product.notes ?? '',
     }
   }
@@ -135,10 +126,6 @@ onMounted(load)
           </select>
         </label>
         <div class="field">
-          <label :for="quantityId" class="field-label">{{ $t('products.quantity') }}</label>
-          <QuantityStepper v-model="form.quantity" :input-id="quantityId" :step="1" />
-        </div>
-        <div class="field">
           <label :for="minStockId" class="field-label">{{ $t('products.minStock') }}</label>
           <QuantityStepper v-model="form.minStock" :input-id="minStockId" :step="1" />
         </div>
@@ -159,10 +146,6 @@ onMounted(load)
               {{ store.name }}
             </option>
           </select>
-        </label>
-        <label v-if="selectedCategory?.requiresExpiration" class="field">
-          <span>{{ $t('products.expiration') }}</span>
-          <input v-model="form.expirationDate" type="date" required />
         </label>
         <label class="field full">
           <span>{{ $t('products.notes') }}</span>

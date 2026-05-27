@@ -2,9 +2,9 @@
 import { onMounted, ref } from 'vue'
 
 import { api } from '@/api/client'
-import type { ReportRow } from '@/api/types'
+import type { ShoppingListRow } from '@/api/types'
 
-const items = ref<ReportRow[]>([])
+const items = ref<ShoppingListRow[]>([])
 
 onMounted(async () => {
   items.value = (await api.shoppingList()).items

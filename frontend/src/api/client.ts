@@ -1,4 +1,5 @@
 import type {
+  BatchPayload,
   Category,
   ExpiringResponse,
   MovementReason,
@@ -76,8 +77,13 @@ export const api = {
   updateProduct: (id: number, payload: ProductPayload) =>
     request<Product>(`/api/products/${id}`, { method: 'PATCH', body: payload }),
   deleteProduct: (id: number) => request<void>(`/api/products/${id}`, { method: 'DELETE' }),
-  addMovement: (id: number, delta: string, reason: MovementReason) =>
-    request<Product>(`/api/products/${id}/movements`, {
+
+  createBatch: (productId: number, payload: BatchPayload) =>
+    request<Product>(`/api/products/${productId}/batches`, { method: 'POST', body: payload }),
+  deleteBatch: (productId: number, batchId: number) =>
+    request<void>(`/api/products/${productId}/batches/${batchId}`, { method: 'DELETE' }),
+  batchMovement: (productId: number, batchId: number, delta: string, reason: MovementReason) =>
+    request<Product>(`/api/products/${productId}/batches/${batchId}/movements`, {
       method: 'POST',
       body: { delta, reason },
     }),
