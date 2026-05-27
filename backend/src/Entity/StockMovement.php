@@ -10,7 +10,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: StockMovementRepository::class)]
 #[ORM\Table(name: 'stock_movements')]
-#[ORM\Index(name: 'stock_movements_product_idx', columns: ['product_id'])]
+#[ORM\Index(name: 'stock_movements_batch_idx', columns: ['batch_id'])]
 class StockMovement
 {
     #[ORM\Id]
@@ -18,9 +18,9 @@ class StockMovement
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'movements')]
+    #[ORM\ManyToOne(targetEntity: Batch::class, inversedBy: 'movements')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private Product $product;
+    private Batch $batch;
 
     #[ORM\Column(type: 'decimal', precision: 12, scale: 3)]
     #[Assert\NotEqualTo(value: '0', message: 'delta must be non-zero')]
@@ -32,17 +32,41 @@ class StockMovement
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $occurredAt;
 
-    public function __construct(Product $product, string $delta, MovementReason $reason)
+    public function __construct(Batch $batch, string $delta, MovementReason $reason)
     {
-        $this->product = $product;
+        $this->batch = $batch;
         $this->delta = $delta;
         $this->reason = $reason;
         $this->occurredAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int { return $this->id; }
-    public function getProduct(): Product { return $this->product; }
-    public function getDelta(): string { return $this->delta; }
-    public function getReason(): MovementReason { return $this->reason; }
-    public function getOccurredAt(): \DateTimeImmutable { return $this->occurredAt; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getBatch(): Batch
+    {
+        return $this->batch;
+    }
+
+    public function getProduct(): Product
+    {
+        return $this->batch->getProduct();
+    }
+
+    public function getDelta(): string
+    {
+        return $this->delta;
+    }
+
+    public function getReason(): MovementReason
+    {
+        return $this->reason;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
 }

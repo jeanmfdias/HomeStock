@@ -184,7 +184,9 @@ Authenticated endpoints:
 | `GET` | `/api/products/{id}` |
 | `PATCH` | `/api/products/{id}` |
 | `DELETE` | `/api/products/{id}` |
-| `POST` | `/api/products/{id}/movements` |
+| `POST` | `/api/products/{id}/batches` |
+| `DELETE` | `/api/products/{id}/batches/{batchId}` |
+| `POST` | `/api/products/{id}/batches/{batchId}/movements` |
 | `GET` | `/api/categories` |
 | `POST` | `/api/categories` |
 | `GET` | `/api/storage-locations` |

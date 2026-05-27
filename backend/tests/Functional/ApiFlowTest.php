@@ -62,23 +62,36 @@ class ApiFlowTest extends WebTestCase
         $me = $this->decode();
         self::assertSame('jean@example.com', $me['email']);
 
-        // Create product
+        // Create product (no quantity / expiration on creation)
         $marketId = $this->categoryId('market');
         $this->json('POST', '/api/products', [
             'name' => 'Milk',
             'categoryId' => $marketId,
             'unitType' => 'l',
-            'quantity' => '2',
             'minStock' => '1',
-            'expirationDate' => (new \DateTimeImmutable('+5 days'))->format('Y-m-d'),
         ]);
         self::assertResponseStatusCodeSame(201);
         $product = $this->decode();
         self::assertSame('Milk', $product['name']);
-        self::assertSame(0, bccomp($product['quantity'], '2', 3));
+        self::assertSame(0, bccomp($product['quantity'], '0', 3));
+        self::assertSame([], $product['batches']);
+        self::assertNull($product['nextExpiration']);
+        $productId = $product['id'];
 
-        // Consume 1.5 L
-        $this->json('POST', '/api/products/' . $product['id'] . '/movements', [
+        // Add a batch (purchase) — 2 L expiring in 5 days
+        $expDate = (new \DateTimeImmutable('+5 days'))->format('Y-m-d');
+        $this->json('POST', '/api/products/'.$productId.'/batches', [
+            'quantity' => '2',
+            'expirationDate' => $expDate,
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $afterAdd = $this->decode();
+        self::assertCount(1, $afterAdd['batches']);
+        self::assertSame(0, bccomp($afterAdd['quantity'], '2', 3));
+        $batchId = $afterAdd['batches'][0]['id'];
+
+        // Consume 1.5 L from this batch
+        $this->json('POST', '/api/products/'.$productId.'/batches/'.$batchId.'/movements', [
             'delta' => '-1.5',
             'reason' => 'consume',
         ]);
@@ -87,25 +100,77 @@ class ApiFlowTest extends WebTestCase
         self::assertSame('0.500', $afterConsume['quantity']);
         self::assertTrue($afterConsume['belowMinStock']);
 
-        // Shopping list contains it
+        // Shopping list contains the product
         $this->client->request('GET', '/api/reports/shopping-list');
         self::assertResponseIsSuccessful();
         $list = $this->decode();
         self::assertCount(1, $list['items']);
         self::assertSame('Milk', $list['items'][0]['name']);
+        self::assertArrayNotHasKey('expirationDate', $list['items'][0]);
 
-        // Expiring report contains it
+        // Expiring report contains a per-batch row
         $this->client->request('GET', '/api/reports/expiring?days=7');
         self::assertResponseIsSuccessful();
         $exp = $this->decode();
         self::assertCount(1, $exp['items']);
+        self::assertSame($batchId, $exp['items'][0]['batchId']);
+        self::assertSame($productId, $exp['items'][0]['productId']);
 
-        // Cannot consume more than available
-        $this->json('POST', '/api/products/' . $product['id'] . '/movements', [
+        // Cannot consume more than batch holds
+        $this->json('POST', '/api/products/'.$productId.'/batches/'.$batchId.'/movements', [
             'delta' => '-10',
             'reason' => 'consume',
         ]);
         self::assertResponseStatusCodeSame(422);
+
+        // Cleaning category + batch with no expirationDate -> 201
+        $cleaningId = $this->categoryId('cleaning');
+        $this->json('POST', '/api/products', [
+            'name' => 'Soap',
+            'categoryId' => $cleaningId,
+            'unitType' => 'unit',
+            'minStock' => '1',
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $soap = $this->decode();
+        $this->json('POST', '/api/products/'.$soap['id'].'/batches', [
+            'quantity' => '3',
+            'expirationDate' => null,
+        ]);
+        self::assertResponseStatusCodeSame(201);
+
+        // Market category + batch without expirationDate -> 422 expiration_required_for_category
+        $this->json('POST', '/api/products', [
+            'name' => 'Bread',
+            'categoryId' => $marketId,
+            'unitType' => 'unit',
+            'minStock' => '1',
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $bread = $this->decode();
+        $this->json('POST', '/api/products/'.$bread['id'].'/batches', [
+            'quantity' => '1',
+            'expirationDate' => null,
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        $err = $this->decode();
+        self::assertSame('expiration_required_for_category', $err['error']);
+
+        // Same expirationDate on second POST -> still one batch, quantity merged
+        $this->json('POST', '/api/products/'.$productId.'/batches', [
+            'quantity' => '1.5',
+            'expirationDate' => $expDate,
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $afterMerge = $this->decode();
+        self::assertCount(1, $afterMerge['batches']);
+        self::assertSame(0, bccomp($afterMerge['batches'][0]['quantity'], '2', 3));
+
+        // DELETE batch with movements -> 409
+        $this->client->request('DELETE', '/api/products/'.$productId.'/batches/'.$batchId);
+        self::assertResponseStatusCodeSame(409);
+        $delErr = $this->decode();
+        self::assertSame('batch_has_movements', $delErr['error']);
     }
 
     public function testUnauthenticatedAccessIsRejected(): void
@@ -137,6 +202,7 @@ class ApiFlowTest extends WebTestCase
     {
         $cat = $this->em->getRepository(Category::class)->findOneBy(['slug' => $slug]);
         self::assertNotNull($cat);
+
         return (int) $cat->getId();
     }
 }

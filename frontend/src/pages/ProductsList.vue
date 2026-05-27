@@ -3,8 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
-import { api } from '@/api/client'
-import type { MovementReason, Product } from '@/api/types'
+import { ApiError, api } from '@/api/client'
+import type { BatchPayload, MovementReason, Product } from '@/api/types'
 import ProductCard from '@/components/ProductCard.vue'
 
 type Filter = 'all' | 'belowMin' | 'expiring'
@@ -37,11 +37,50 @@ async function load() {
   }
 }
 
-async function addMovement(id: number, delta: string, reason: MovementReason) {
+function replaceProduct(updated: Product) {
+  products.value = products.value.map((product) => (product.id === updated.id ? updated : product))
+}
+
+async function addBatch(productId: number, payload: BatchPayload) {
   try {
-    const updated = await api.addMovement(id, delta, reason)
-    products.value = products.value.map((product) => (product.id === id ? updated : product))
+    const updated = await api.createBatch(productId, payload)
+    replaceProduct(updated)
+  } catch (e) {
+    if (e instanceof ApiError && typeof e.body === 'object' && e.body !== null) {
+      const code = (e.body as { error?: string }).error
+      if (code === 'expiration_required_for_category') {
+        error.value = 'products.expirationRequired'
+        return
+      }
+    }
+    error.value = 'errors.generic'
+  }
+}
+
+async function batchMovement(
+  productId: number,
+  batchId: number,
+  delta: string,
+  reason: MovementReason,
+) {
+  try {
+    const updated = await api.batchMovement(productId, batchId, delta, reason)
+    replaceProduct(updated)
   } catch {
+    error.value = 'errors.generic'
+  }
+}
+
+async function deleteBatch(productId: number, batchId: number) {
+  try {
+    await api.deleteBatch(productId, batchId)
+    const refreshed = await api.product(productId)
+    replaceProduct(refreshed)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 409) {
+      error.value = 'products.cannotDeleteBatchWithHistory'
+      return
+    }
     error.value = 'errors.generic'
   }
 }
@@ -97,7 +136,9 @@ onMounted(load)
         :product="product"
         @edit="router.push(`/products/${$event}/edit`)"
         @delete="deleteProduct"
-        @movement="addMovement"
+        @add-batch="addBatch"
+        @batch-movement="batchMovement"
+        @delete-batch="deleteBatch"
       />
     </div>
   </section>

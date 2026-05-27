@@ -44,14 +44,29 @@ Each product stores:
 - Storage location, optional.
 - Preferred store, optional.
 - Unit type, required.
-- Current quantity, required decimal.
 - Minimum stock, required decimal.
-- Expiration date, optional unless required by category.
 - Notes, optional.
+
+A product's current quantity and next expiration date are computed from its batches.
+
+### Batches
+
+Stock is held in **batches**. A product has zero or more batches; each batch owns its own quantity and optional expiration date.
+
+Each batch stores:
+
+- Quantity, required decimal.
+- Expiration date, optional unless required by the product's category.
+
+Rules:
+
+- A new batch is created via `POST /api/products/{id}/batches`. If a batch with the same expiration date already exists for that product (NULL counts as a match), the quantity is added to the existing batch instead of creating a duplicate.
+- A batch with no recorded stock movements may be deleted; a batch with movements returns 409 `batch_has_movements`.
+- A product's `quantity` is the sum of its batch quantities; `nextExpiration` is the earliest non-null batch expiration date.
 
 ### Stock Movements
 
-Stock quantity changes through explicit movement records.
+Stock quantity changes through explicit movement records, each recorded against a specific batch.
 
 Allowed movement reasons:
 
@@ -60,7 +75,7 @@ Allowed movement reasons:
 - `discard`
 - `adjust`
 
-Movements update the product quantity transactionally. A movement that would make quantity negative is rejected.
+Movements update the batch quantity transactionally. A movement that would make a batch quantity negative is rejected.
 
 ### Shopping List
 
@@ -101,14 +116,13 @@ The product includes a profile area. A change-password flow is planned but not f
 - Product `name` is required.
 - Product `category` is required.
 - Product `unit_type` is required.
-- Product `quantity` is required and stored as a decimal.
 - Product `min_stock` is required and stored as a decimal.
-- Product `expiration_date` is required when the selected category has `requires_expiration = true`.
-- Product `expiration_date` is optional when the selected category has `requires_expiration = false`.
-- Product quantity must not become negative.
-- Product quantity should not be edited directly in normal user flows; it must change through stock movements.
+- Product quantity is the sum of its batches' quantities and is computed on read.
+- A batch's `expiration_date` is required when the product's category has `requires_expiration = true`; otherwise it is optional.
+- A batch quantity must not become negative.
+- Batch quantities should not be edited directly; they change through stock movements (or through batch creation, which records a `purchase` movement).
 - Products are scoped to the authenticated user.
-- Cross-user product access returns 404.
+- Cross-user product or batch access returns 404.
 
 ### Decimal Rules
 
@@ -191,7 +205,9 @@ Authenticated endpoints:
 | GET | `/api/products/{id}` | Get product |
 | PATCH | `/api/products/{id}` | Update product |
 | DELETE | `/api/products/{id}` | Delete product |
-| POST | `/api/products/{id}/movements` | Add stock movement |
+| POST | `/api/products/{id}/batches` | Add or merge a batch (records a `purchase` movement) |
+| DELETE | `/api/products/{id}/batches/{batchId}` | Delete a batch with no movements |
+| POST | `/api/products/{id}/batches/{batchId}/movements` | Add a stock movement against a batch |
 | GET | `/api/categories` | List categories |
 | POST | `/api/categories` | Create category |
 | GET | `/api/storage-locations` | List storage locations |
@@ -220,9 +236,9 @@ The MVP implementation currently includes:
 - Symfony backend skeleton and domain model.
 - User registration, login, logout, and current-user endpoint.
 - Product CRUD.
-- Stock movement endpoint.
-- Shopping list report.
-- Expiring products report.
+- Per-batch inventory: batches own quantity and expiration date; stock movements record deltas against a batch.
+- Shopping list report (per-product).
+- Expiring products report (per-batch rows).
 - Category, storage location, and store endpoints.
 - Vue SPA with authenticated routes.
 - Product, shopping list, expiring soon, settings, profile, login, and registration pages.
@@ -239,10 +255,12 @@ Verified golden path:
 - Authenticated `/api/auth/me` works.
 - Seed categories are available.
 - Products can be created.
-- Consumption movement decrements quantity.
-- Shopping list includes products where quantity is at or below minimum stock.
-- Expiring report returns products within the selected window.
+- Batches can be added to a product (same-date batches merge instead of duplicating).
+- Consumption movement against a batch decrements that batch's quantity and the product's computed total.
+- Shopping list includes products where the computed total quantity is at or below minimum stock.
+- Expiring report returns one row per batch within the selected window.
 - Negative stock movement is rejected with 422.
+- Adding a batch without an expiration date for a category that requires one is rejected with 422.
 - Logout invalidates the session.
 
 ## Known Limitations and Follow-up Work

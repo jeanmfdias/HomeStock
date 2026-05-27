@@ -20,6 +20,14 @@ export interface ReferenceItem {
   name: string
 }
 
+export interface Batch {
+  id: number
+  quantity: string
+  expirationDate: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Product {
   id: number
   name: string
@@ -28,11 +36,12 @@ export interface Product {
   storageLocation: ReferenceItem | null
   preferredStore: ReferenceItem | null
   unitType: UnitType
-  quantity: string
   minStock: string
-  expirationDate: string | null
+  quantity: string
+  nextExpiration: string | null
   notes: string | null
   belowMinStock: boolean
+  batches: Batch[]
   createdAt: string
   updatedAt: string
 }
@@ -44,14 +53,18 @@ export interface ProductPayload {
   storageLocationId?: number | null
   preferredStoreId?: number | null
   unitType: UnitType
-  quantity: string
   minStock: string
-  expirationDate?: string | null
   notes?: string | null
 }
 
-export interface ReportRow {
-  id: number
+export interface BatchPayload {
+  quantity: string
+  expirationDate?: string | null
+}
+
+export interface ExpiringRow {
+  productId: number
+  batchId: number
   name: string
   brand: string | null
   quantity: string
@@ -62,13 +75,24 @@ export interface ReportRow {
   preferredStore: string | null
 }
 
+export interface ShoppingListRow {
+  id: number
+  name: string
+  brand: string | null
+  quantity: string
+  minStock: string
+  unitType: UnitType
+  category: string
+  preferredStore: string | null
+}
+
 export interface ShoppingListResponse {
-  items: ReportRow[]
+  items: ShoppingListRow[]
 }
 
 export interface ExpiringResponse {
   days: number
-  items: ReportRow[]
+  items: ExpiringRow[]
 }
 
 export interface ApiErrorBody {

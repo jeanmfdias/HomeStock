@@ -13,7 +13,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\Table(name: 'products')]
 #[ORM\Index(name: 'products_user_idx', columns: ['user_id'])]
-#[ORM\Index(name: 'products_expiration_idx', columns: ['expiration_date'])]
 class Product
 {
     #[ORM\Id]
@@ -51,14 +50,7 @@ class Product
 
     #[ORM\Column(type: 'decimal', precision: 12, scale: 3)]
     #[Assert\PositiveOrZero]
-    private string $quantity = '0';
-
-    #[ORM\Column(type: 'decimal', precision: 12, scale: 3)]
-    #[Assert\PositiveOrZero]
     private string $minStock = '0';
-
-    #[ORM\Column(type: 'date_immutable', nullable: true)]
-    private ?\DateTimeImmutable $expirationDate = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
@@ -69,9 +61,9 @@ class Product
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $updatedAt;
 
-    /** @var Collection<int, StockMovement> */
-    #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'product', cascade: ['remove'], orphanRemoval: true)]
-    private Collection $movements;
+    /** @var Collection<int, Batch> */
+    #[ORM\OneToMany(targetEntity: Batch::class, mappedBy: 'product', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $batches;
 
     public function __construct(User $user, string $name, Category $category)
     {
@@ -80,7 +72,7 @@ class Product
         $this->category = $category;
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = $this->createdAt;
-        $this->movements = new ArrayCollection();
+        $this->batches = new ArrayCollection();
     }
 
     public function touch(): void
@@ -88,36 +80,140 @@ class Product
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int { return $this->id; }
-    public function getUser(): User { return $this->user; }
-    public function getName(): string { return $this->name; }
-    public function setName(string $v): void { $this->name = $v; }
-    public function getBrand(): ?string { return $this->brand; }
-    public function setBrand(?string $v): void { $this->brand = $v; }
-    public function getCategory(): Category { return $this->category; }
-    public function setCategory(Category $v): void { $this->category = $v; }
-    public function getStorageLocation(): ?StorageLocation { return $this->storageLocation; }
-    public function setStorageLocation(?StorageLocation $v): void { $this->storageLocation = $v; }
-    public function getPreferredStore(): ?Store { return $this->preferredStore; }
-    public function setPreferredStore(?Store $v): void { $this->preferredStore = $v; }
-    public function getUnitType(): UnitType { return $this->unitType; }
-    public function setUnitType(UnitType $v): void { $this->unitType = $v; }
-    public function getQuantity(): string { return $this->quantity; }
-    public function setQuantity(string $v): void { $this->quantity = $v; }
-    public function getMinStock(): string { return $this->minStock; }
-    public function setMinStock(string $v): void { $this->minStock = $v; }
-    public function getExpirationDate(): ?\DateTimeImmutable { return $this->expirationDate; }
-    public function setExpirationDate(?\DateTimeImmutable $v): void { $this->expirationDate = $v; }
-    public function getNotes(): ?string { return $this->notes; }
-    public function setNotes(?string $v): void { $this->notes = $v; }
-    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
-    public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    /** @return Collection<int, StockMovement> */
-    public function getMovements(): Collection { return $this->movements; }
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $v): void
+    {
+        $this->name = $v;
+    }
+
+    public function getBrand(): ?string
+    {
+        return $this->brand;
+    }
+
+    public function setBrand(?string $v): void
+    {
+        $this->brand = $v;
+    }
+
+    public function getCategory(): Category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(Category $v): void
+    {
+        $this->category = $v;
+    }
+
+    public function getStorageLocation(): ?StorageLocation
+    {
+        return $this->storageLocation;
+    }
+
+    public function setStorageLocation(?StorageLocation $v): void
+    {
+        $this->storageLocation = $v;
+    }
+
+    public function getPreferredStore(): ?Store
+    {
+        return $this->preferredStore;
+    }
+
+    public function setPreferredStore(?Store $v): void
+    {
+        $this->preferredStore = $v;
+    }
+
+    public function getUnitType(): UnitType
+    {
+        return $this->unitType;
+    }
+
+    public function setUnitType(UnitType $v): void
+    {
+        $this->unitType = $v;
+    }
+
+    public function getMinStock(): string
+    {
+        return $this->minStock;
+    }
+
+    public function setMinStock(string $v): void
+    {
+        $this->minStock = $v;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->notes;
+    }
+
+    public function setNotes(?string $v): void
+    {
+        $this->notes = $v;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    /** @return Collection<int, Batch> */
+    public function getBatches(): Collection
+    {
+        return $this->batches;
+    }
+
+    public function getTotalQuantity(): string
+    {
+        $sum = '0';
+        foreach ($this->batches as $batch) {
+            $sum = bcadd($sum, $batch->getQuantity(), 3);
+        }
+
+        return $sum;
+    }
+
+    public function getNextExpiration(): ?\DateTimeImmutable
+    {
+        $next = null;
+        foreach ($this->batches as $batch) {
+            $exp = $batch->getExpirationDate();
+            if (null === $exp) {
+                continue;
+            }
+            if (null === $next || $exp < $next) {
+                $next = $exp;
+            }
+        }
+
+        return $next;
+    }
 
     public function isBelowMinStock(): bool
     {
-        return bccomp($this->quantity, $this->minStock, 3) <= 0;
+        return bccomp($this->getTotalQuantity(), $this->minStock, 3) <= 0;
     }
 }

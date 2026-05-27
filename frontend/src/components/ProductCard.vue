@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { useId } from 'vue'
+import { ref } from 'vue'
 
-import type { MovementReason, Product } from '@/api/types'
+import type { BatchPayload, MovementReason, Product } from '@/api/types'
+import BatchAddPanel from './BatchAddPanel.vue'
+import BatchList from './BatchList.vue'
+import BatchRemovePanel from './BatchRemovePanel.vue'
 import ExpirationBadge from './ExpirationBadge.vue'
 
 defineProps<{
@@ -11,23 +14,31 @@ defineProps<{
 const emit = defineEmits<{
   edit: [id: number]
   delete: [id: number]
-  movement: [id: number, delta: string, reason: MovementReason]
+  addBatch: [productId: number, payload: BatchPayload]
+  batchMovement: [productId: number, batchId: number, delta: string, reason: MovementReason]
+  deleteBatch: [productId: number, batchId: number]
 }>()
 
-const deltaId = useId()
-const reasonId = useId()
-const hintId = useId()
+type PanelMode = null | 'add' | 'remove'
+const panel = ref<PanelMode>(null)
 
-function submitMovement(event: Event, id: number) {
-  const form = event.currentTarget as HTMLFormElement
-  const data = new FormData(form)
-  emit(
-    'movement',
-    id,
-    String(data.get('delta') ?? ''),
-    String(data.get('reason')) as MovementReason,
-  )
-  form.reset()
+function togglePanel(mode: 'add' | 'remove') {
+  panel.value = panel.value === mode ? null : mode
+}
+
+function onAddBatch(productId: number, payload: BatchPayload) {
+  emit('addBatch', productId, payload)
+  panel.value = null
+}
+
+function onBatchMovement(
+  productId: number,
+  batchId: number,
+  delta: string,
+  reason: MovementReason,
+) {
+  emit('batchMovement', productId, batchId, delta, reason)
+  panel.value = null
 }
 </script>
 
@@ -62,34 +73,59 @@ function submitMovement(event: Event, id: number) {
       </div>
     </dl>
 
-    <ExpirationBadge :date="product.expirationDate" />
+    <div v-if="product.batches.length > 0" class="next-expiration">
+      <span class="next-expiration-label">{{ $t('products.nextExpiration') }}</span>
+      <ExpirationBadge :date="product.nextExpiration" />
+    </div>
 
-    <form class="movement-form" @submit.prevent="submitMovement($event, product.id)">
-      <div class="movement-fields">
-        <div class="field">
-          <label :for="deltaId">{{ $t('products.delta') }}</label>
-          <input
-            :id="deltaId"
-            name="delta"
-            inputmode="decimal"
-            :placeholder="$t('products.deltaPlaceholder')"
-            :aria-describedby="hintId"
-            required
-          />
-        </div>
-        <div class="field">
-          <label :for="reasonId">{{ $t('products.reason') }}</label>
-          <select :id="reasonId" name="reason">
-            <option value="purchase">{{ $t('movement.purchase') }}</option>
-            <option value="consume">{{ $t('movement.consume') }}</option>
-            <option value="discard">{{ $t('movement.discard') }}</option>
-            <option value="adjust">{{ $t('movement.adjust') }}</option>
-          </select>
-        </div>
-      </div>
-      <p :id="hintId" class="field-hint">{{ $t('products.deltaHelp') }}</p>
-      <button class="primary-button" type="submit">{{ $t('products.apply') }}</button>
-    </form>
+    <section class="batches-section">
+      <h3 class="section-title">{{ $t('products.batches') }}</h3>
+      <BatchList
+        :batches="product.batches"
+        :unit-type="product.unitType"
+        @delete="(batchId) => emit('deleteBatch', product.id, batchId)"
+      />
+    </section>
+
+    <div class="stock-actions">
+      <button
+        class="primary-button"
+        type="button"
+        :aria-pressed="panel === 'add'"
+        @click="togglePanel('add')"
+      >
+        {{ $t('products.addStock') }}
+      </button>
+      <button
+        class="ghost-button"
+        type="button"
+        :disabled="product.batches.length === 0"
+        :aria-pressed="panel === 'remove'"
+        @click="togglePanel('remove')"
+      >
+        {{ $t('products.removeStock') }}
+      </button>
+    </div>
+
+    <BatchAddPanel
+      v-if="panel === 'add'"
+      :product-id="product.id"
+      :category="product.category"
+      :batches="product.batches"
+      :unit-type="product.unitType"
+      @add-batch="onAddBatch"
+      @batch-movement="onBatchMovement"
+      @cancel="panel = null"
+    />
+
+    <BatchRemovePanel
+      v-if="panel === 'remove'"
+      :product-id="product.id"
+      :batches="product.batches"
+      :unit-type="product.unitType"
+      @batch-movement="onBatchMovement"
+      @cancel="panel = null"
+    />
 
     <footer class="card-actions">
       <button class="ghost-button" type="button" @click="emit('edit', product.id)">
@@ -148,31 +184,37 @@ dd {
   overflow-wrap: anywhere;
 }
 
-.movement-form {
-  display: grid;
+.next-expiration {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
 }
 
-.movement-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: var(--space-2);
-}
-
-.movement-form input,
-.movement-form select {
-  min-width: 0;
-  min-height: 40px;
-  border: 1px solid var(--c-border-strong);
-  border-radius: var(--radius);
-  padding: var(--space-2);
-  background: #fff;
-}
-
-.movement-form .field > label {
-  color: var(--c-text-subtle);
-  font-size: var(--fs-sm);
+.next-expiration-label {
+  color: var(--c-text-muted);
+  font-size: 0.82rem;
   font-weight: 700;
+}
+
+.batches-section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--c-text-subtle);
+}
+
+.stock-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.stock-actions .primary-button,
+.stock-actions .ghost-button {
+  flex: 1;
 }
 
 .card-actions .ghost-button,

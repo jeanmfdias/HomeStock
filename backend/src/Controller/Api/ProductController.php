@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Entity\Batch;
 use App\Entity\Category;
-use App\Entity\MovementReason;
 use App\Entity\Product;
-use App\Entity\StockMovement;
 use App\Entity\StorageLocation;
 use App\Entity\Store;
 use App\Entity\UnitType;
@@ -40,15 +39,15 @@ class ProductController
     public function list(Request $request, #[CurrentUser] User $user): JsonResponse
     {
         $filters = [
-            'categoryId' => $request->query->get('category') !== null ? (int) $request->query->get('category') : null,
-            'storageLocationId' => $request->query->get('storage') !== null ? (int) $request->query->get('storage') : null,
-            'expiringWithinDays' => $request->query->get('expiring_within_days') !== null ? (int) $request->query->get('expiring_within_days') : null,
+            'categoryId' => null !== $request->query->get('category') ? (int) $request->query->get('category') : null,
+            'storageLocationId' => null !== $request->query->get('storage') ? (int) $request->query->get('storage') : null,
+            'expiringWithinDays' => null !== $request->query->get('expiring_within_days') ? (int) $request->query->get('expiring_within_days') : null,
             'belowMinStock' => $request->query->getBoolean('below_min_stock'),
         ];
 
         $items = $this->products->findForUser($user, $filters);
 
-        return new JsonResponse(array_map(fn (Product $p) => $this->serialize($p), $items));
+        return new JsonResponse(array_map(fn (Product $p) => $this->serializeProduct($p), $items));
     }
 
     #[Route('/api/products', methods: ['POST'])]
@@ -59,7 +58,7 @@ class ProductController
         $name = trim((string) ($payload['name'] ?? ''));
         $categoryId = isset($payload['categoryId']) ? (int) $payload['categoryId'] : 0;
 
-        if ($name === '' || $categoryId === 0) {
+        if ('' === $name || 0 === $categoryId) {
             return new JsonResponse(['error' => 'name_and_categoryId_required'], 422);
         }
 
@@ -79,7 +78,7 @@ class ProductController
         $this->em->persist($product);
         $this->em->flush();
 
-        return new JsonResponse($this->serialize($product), Response::HTTP_CREATED);
+        return new JsonResponse($this->serializeProduct($product), Response::HTTP_CREATED);
     }
 
     #[Route('/api/products/{id}', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -90,7 +89,7 @@ class ProductController
             return $product;
         }
 
-        return new JsonResponse($this->serialize($product));
+        return new JsonResponse($this->serializeProduct($product));
     }
 
     #[Route('/api/products/{id}', methods: ['PATCH'], requirements: ['id' => '\d+'])]
@@ -112,7 +111,7 @@ class ProductController
 
         $this->em->flush();
 
-        return new JsonResponse($this->serialize($product));
+        return new JsonResponse($this->serializeProduct($product));
     }
 
     #[Route('/api/products/{id}', methods: ['DELETE'], requirements: ['id' => '\d+'])]
@@ -129,51 +128,6 @@ class ProductController
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
-    #[Route('/api/products/{id}/movements', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function addMovement(int $id, Request $request, #[CurrentUser] User $user): JsonResponse
-    {
-        $product = $this->ownedOr404($id, $user);
-        if ($product instanceof JsonResponse) {
-            return $product;
-        }
-
-        $payload = $this->decode($request);
-        $deltaRaw = $payload['delta'] ?? null;
-        $reasonRaw = (string) ($payload['reason'] ?? '');
-
-        if ($deltaRaw === null || !is_numeric($deltaRaw)) {
-            return new JsonResponse(['error' => 'delta_required_numeric'], 422);
-        }
-        $reason = MovementReason::tryFrom($reasonRaw);
-        if ($reason === null) {
-            return new JsonResponse(['error' => 'invalid_reason'], 422);
-        }
-
-        $delta = (string) $deltaRaw;
-        if (bccomp($delta, '0', 3) === 0) {
-            return new JsonResponse(['error' => 'delta_must_be_nonzero'], 422);
-        }
-
-        try {
-            $this->em->wrapInTransaction(function () use ($product, $delta, $reason): void {
-                $newQuantity = bcadd($product->getQuantity(), $delta, 3);
-                if (bccomp($newQuantity, '0', 3) < 0) {
-                    throw new \DomainException('quantity_cannot_go_negative');
-                }
-                $product->setQuantity($newQuantity);
-                $product->touch();
-
-                $movement = new StockMovement($product, $delta, $reason);
-                $this->em->persist($movement);
-            });
-        } catch (\DomainException $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 422);
-        }
-
-        return new JsonResponse($this->serialize($product));
-    }
-
-    /** @return Product|JsonResponse */
     private function ownedOr404(int $id, User $user): Product|JsonResponse
     {
         $product = $this->products->find($id);
@@ -191,7 +145,7 @@ class ProductController
             $product->setName(trim($payload['name']));
         }
         if (array_key_exists('brand', $payload)) {
-            $product->setBrand($payload['brand'] === null ? null : trim((string) $payload['brand']));
+            $product->setBrand(null === $payload['brand'] ? null : trim((string) $payload['brand']));
         }
         if (array_key_exists('categoryId', $payload)) {
             $cat = $this->categories->find((int) $payload['categoryId']);
@@ -200,49 +154,51 @@ class ProductController
             }
         }
         if (array_key_exists('storageLocationId', $payload)) {
-            $loc = $payload['storageLocationId'] === null
+            $loc = null === $payload['storageLocationId']
                 ? null
                 : $this->locations->find((int) $payload['storageLocationId']);
             $product->setStorageLocation($loc instanceof StorageLocation ? $loc : null);
         }
         if (array_key_exists('preferredStoreId', $payload)) {
-            $store = $payload['preferredStoreId'] === null
+            $store = null === $payload['preferredStoreId']
                 ? null
                 : $this->stores->find((int) $payload['preferredStoreId']);
             $product->setPreferredStore($store instanceof Store ? $store : null);
         }
         if (array_key_exists('unitType', $payload) && is_string($payload['unitType'])) {
             $unit = UnitType::tryFrom($payload['unitType']);
-            if ($unit !== null) {
+            if (null !== $unit) {
                 $product->setUnitType($unit);
             }
-        }
-        if (array_key_exists('quantity', $payload) && is_numeric($payload['quantity'])) {
-            $product->setQuantity((string) $payload['quantity']);
         }
         if (array_key_exists('minStock', $payload) && is_numeric($payload['minStock'])) {
             $product->setMinStock((string) $payload['minStock']);
         }
-        if (array_key_exists('expirationDate', $payload)) {
-            $value = $payload['expirationDate'];
-            if ($value === null || $value === '') {
-                $product->setExpirationDate(null);
-            } elseif (is_string($value)) {
-                try {
-                    $product->setExpirationDate(new \DateTimeImmutable($value));
-                } catch (\Exception) {
-                    // ignore — validator will catch missing required exp later
-                }
-            }
-        }
         if (array_key_exists('notes', $payload)) {
-            $product->setNotes($payload['notes'] === null ? null : (string) $payload['notes']);
+            $product->setNotes(null === $payload['notes'] ? null : (string) $payload['notes']);
         }
     }
 
     /** @return array<string, mixed> */
-    private function serialize(Product $p): array
+    public function serializeProduct(Product $p): array
     {
+        $batches = $p->getBatches()->toArray();
+        usort($batches, function (Batch $a, Batch $b): int {
+            $ad = $a->getExpirationDate();
+            $bd = $b->getExpirationDate();
+            if (null === $ad && null === $bd) {
+                return 0;
+            }
+            if (null === $ad) {
+                return 1;
+            }
+            if (null === $bd) {
+                return -1;
+            }
+
+            return $ad <=> $bd;
+        });
+
         return [
             'id' => $p->getId(),
             'name' => $p->getName(),
@@ -253,20 +209,27 @@ class ProductController
                 'slug' => $p->getCategory()->getSlug(),
                 'requiresExpiration' => $p->getCategory()->requiresExpiration(),
             ],
-            'storageLocation' => $p->getStorageLocation() === null ? null : [
+            'storageLocation' => null === $p->getStorageLocation() ? null : [
                 'id' => $p->getStorageLocation()->getId(),
                 'name' => $p->getStorageLocation()->getName(),
             ],
-            'preferredStore' => $p->getPreferredStore() === null ? null : [
+            'preferredStore' => null === $p->getPreferredStore() ? null : [
                 'id' => $p->getPreferredStore()->getId(),
                 'name' => $p->getPreferredStore()->getName(),
             ],
             'unitType' => $p->getUnitType()->value,
-            'quantity' => $p->getQuantity(),
+            'quantity' => $p->getTotalQuantity(),
             'minStock' => $p->getMinStock(),
-            'expirationDate' => $p->getExpirationDate()?->format('Y-m-d'),
+            'nextExpiration' => $p->getNextExpiration()?->format('Y-m-d'),
             'notes' => $p->getNotes(),
             'belowMinStock' => $p->isBelowMinStock(),
+            'batches' => array_map(fn (Batch $b) => [
+                'id' => $b->getId(),
+                'quantity' => $b->getQuantity(),
+                'expirationDate' => $b->getExpirationDate()?->format('Y-m-d'),
+                'createdAt' => $b->getCreatedAt()->format(\DateTimeInterface::ATOM),
+                'updatedAt' => $b->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            ], $batches),
             'createdAt' => $p->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'updatedAt' => $p->getUpdatedAt()->format(\DateTimeInterface::ATOM),
         ];
@@ -286,7 +249,7 @@ class ProductController
     private function decode(Request $request): array
     {
         $raw = $request->getContent();
-        if ($raw === '') {
+        if ('' === $raw) {
             return [];
         }
         try {

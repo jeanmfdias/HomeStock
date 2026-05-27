@@ -60,7 +60,19 @@
     "soon": "Expires in 1 day | Expires in {days} days",
     "noDate": "No date",
     "decrease": "Decrease",
-    "increase": "Increase"
+    "increase": "Increase",
+    "addStock": "Add stock",
+    "removeStock": "Remove stock",
+    "pickBatch": "Pick a batch",
+    "newBatch": "New batch",
+    "batchOptional": "optional",
+    "batches": "Batches",
+    "batchEmpty": "No batches yet.",
+    "nextExpiration": "Next expiration",
+    "addBatchSuccess": "Batch added.",
+    "cannotDeleteBatchWithHistory": "Can't delete a batch with stock movements.",
+    "expirationRequired": "This category requires an expiration date.",
+    "maxAvailable": "max: {qty} {unit}"
   },
   "reports": {
     "shoppingTitle": "Shopping list",
